@@ -18,6 +18,10 @@ data class Charla(@PrimaryKey val id: String, val titulo: String, val tema: Stri
     val hora: String, val sala: String, val ponente: String, val resumen: String,
     val favorita: Boolean = false)
 
+/** Lo que publica la organización sobre una charla: todo menos la marca, que es del usuario. */
+data class ContenidoCharla(val id: String, val titulo: String, val tema: String, val dia: Int,
+    val hora: String, val sala: String, val ponente: String, val resumen: String)
+
 /** Una sola fila: si existe, alguna vez se guardó una edición válida (aunque tenga cero charlas). */
 @Entity(tableName = "edicion")
 data class Edicion(@PrimaryKey val id: Int = 1, val descargadaEn: Long)
@@ -30,8 +34,13 @@ abstract class CarteleraDao {
     @Query("SELECT EXISTS(SELECT 1 FROM edicion)")
     abstract fun hayEdicion(): Flow<Boolean>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    protected abstract suspend fun guardar(fichas: List<Charla>)
+    /** Solo inserta charlas que no existían; las que ya están quedan intactas (con su marca). */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    protected abstract suspend fun insertarNuevas(fichas: List<Charla>)
+
+    /** Update parcial: pisa título, sala, etc. pero nunca la columna favorita. */
+    @Update(entity = Charla::class)
+    protected abstract suspend fun actualizarContenido(fichas: List<ContenidoCharla>)
 
     @Query("DELETE FROM charlas WHERE id NOT IN (:ids)")
     protected abstract suspend fun borrarAusentes(ids: List<String>)
@@ -44,9 +53,10 @@ abstract class CarteleraDao {
 
     /** La organización publica instantáneas completas: lo que no viene en la respuesta ya no existe. */
     @Transaction
-    open suspend fun reemplazarPrograma(fichas: List<Charla>) {
+    open suspend fun reemplazarPrograma(fichas: List<ContenidoCharla>) {
         if (fichas.isEmpty()) borrarTodas() else borrarAusentes(fichas.map { it.id })
-        guardar(fichas)
+        insertarNuevas(fichas.map { Charla(it.id, it.titulo, it.tema, it.dia, it.hora, it.sala, it.ponente, it.resumen) })
+        actualizarContenido(fichas)
         registrarEdicion(Edicion(descargadaEn = System.currentTimeMillis()))
     }
 

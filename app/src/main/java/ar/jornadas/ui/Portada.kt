@@ -36,7 +36,8 @@ fun Portada(model: ProgramaModel) {
                 if (detalle != null) {
                     TextButton(onClick = { detalle = null }) { Text("Volver") }
                     val ficha = charlas.find { it.id == detalle }
-                    if (ficha != null) Column(Modifier.verticalScroll(rememberScrollState()),
+                    if (ficha == null) Text("Esta charla ya no forma parte del programa.")
+                    else Column(Modifier.verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(ficha.titulo, style = MaterialTheme.typography.headlineMedium)
                         Text("Día ${ficha.dia} · ${ficha.hora} · ${ficha.sala}")

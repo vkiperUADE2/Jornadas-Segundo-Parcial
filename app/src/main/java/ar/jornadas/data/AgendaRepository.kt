@@ -6,7 +6,7 @@ class AgendaRepository(private val api: ProgramaApi, private val dao: CarteleraD
 
     suspend fun sincronizar() {
         val fichas = api.consultar().map {
-            Charla(it.id, it.title, it.track, it.day, it.time, it.room, it.speaker, it.summary)
+            ContenidoCharla(it.id, it.title, it.track, it.day, it.time, it.room, it.speaker, it.summary)
         }
         dao.reemplazarPrograma(fichas)
     }
