@@ -2,13 +2,14 @@ package ar.jornadas.ui
 
 import android.app.Application
 import androidx.lifecycle.*
-import ar.jornadas.Servicios
+import ar.jornadas.JornadasApp
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class ProgramaModel(app: Application, private val estado: SavedStateHandle) : AndroidViewModel(app) {
-    private val servicios = Servicios(app)
+    private val servicios = getApplication<JornadasApp>().servicios
     val mesa = servicios.mesa
     private val repo = servicios.agenda
     val charlas = repo.programa.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -20,9 +21,17 @@ class ProgramaModel(app: Application, private val estado: SavedStateHandle) : An
     val tema = estado.getStateFlow("tema", "Todos")
     val fallo = MutableStateFlow(false)
     val cargando = MutableStateFlow(false)
+    private var descarga: Job? = null
+
+    init {
+        // Una carga automática por proceso: rotar o recrear la pantalla no vuelve a pedir.
+        if (repo.tomarCargaAutomatica()) recargar()
+    }
 
     fun recargar() {
-        viewModelScope.launch {
+        // Si ya hay una petición en curso, los toques extra se ignoran.
+        if (descarga?.isActive == true) return
+        descarga = viewModelScope.launch {
             cargando.value = true
             fallo.value = false
             try {
