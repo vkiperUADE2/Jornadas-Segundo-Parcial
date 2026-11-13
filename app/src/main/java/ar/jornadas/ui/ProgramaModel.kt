@@ -7,14 +7,17 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
-class ProgramaModel(app: Application) : AndroidViewModel(app) {
+class ProgramaModel(app: Application, private val estado: SavedStateHandle) : AndroidViewModel(app) {
     private val servicios = Servicios(app)
     val mesa = servicios.mesa
     private val repo = servicios.agenda
     val charlas = repo.programa.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     /** null mientras Room todavía no respondió; true si hay alguna edición guardada (aunque esté vacía). */
     val hayEdicion = repo.hayEdicion.stateIn(viewModelScope, SharingStarted.Eagerly, null)
-    val dia = MutableStateFlow(0)
+    // Filtros en SavedStateHandle: sobreviven a rotación, a salir del catálogo y a la muerte del proceso,
+    // pero no se guardan en disco, así que una tarea nueva arranca sin filtros.
+    val dia = estado.getStateFlow("dia", 0)
+    val tema = estado.getStateFlow("tema", "Todos")
     val fallo = MutableStateFlow(false)
     val cargando = MutableStateFlow(false)
 
@@ -34,6 +37,9 @@ class ProgramaModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    fun elegirDia(indice: Int) { estado["dia"] = indice }
+    fun elegirTema(nombre: String) { estado["tema"] = nombre }
 
     fun marcar(id: String) { viewModelScope.launch { repo.cambiarFavorita(id) } }
 }
