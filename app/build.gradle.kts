@@ -34,4 +34,6 @@ dependencies {
     kapt("androidx.room:room-compiler:2.6.1")
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    // ServicioLocal usa la API de OkHttp 4; Retrofit 2.11 solo trae OkHttp 3.14 de forma transitiva.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
